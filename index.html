@@ -1,0 +1,786 @@
+
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Christmas Wonderland</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>
+<rect width='100' height='100' rx='22' fill='%2308172b'/>
+<path d='M50 12 L25 48 H38 L19 68 H42 V85 H58 V68 H81 L62 48 H75 Z' fill='%2319a66a'/>
+<path d='M50 12 L50 85' stroke='%23ffffff' stroke-opacity='.15' stroke-width='2'/>
+<path d='M50 4 L53 12 L62 12 L55 18 L58 27 L50 21 L42 27 L45 18 L38 12 L47 12 Z' fill='%23ffd76a'/>
+<circle cx='38' cy='49' r='3' fill='%23ff5268'/>
+<circle cx='61' cy='57' r='3' fill='%23ffd76a'/>
+<circle cx='48' cy='69' r='3' fill='%23ffffff'/>
+<rect x='44' y='85' width='12' height='7' fill='%238b5938'/>
+</svg>">
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    overflow: hidden;
+    background: #030817;
+    font-family: 'Segoe UI', sans-serif;
+    color: white;
+}
+
+canvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.interface {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.header {
+    position: absolute;
+    top: 35px;
+    width: 100%;
+    text-align: center;
+}
+
+.header h1 {
+    font-size: clamp(32px, 5vw, 65px);
+    font-weight: 300;
+    letter-spacing: 9px;
+    color: #fff;
+    text-shadow: 0 0 25px rgba(130, 200, 255, .6);
+}
+
+.header p {
+    margin-top: 10px;
+    font-size: 11px;
+    letter-spacing: 5px;
+    color: #a9c7e9;
+    text-transform: uppercase;
+}
+
+.controls {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 12px;
+    pointer-events: auto;
+}
+
+button {
+    padding: 13px 23px;
+    border: 1px solid rgba(255,255,255,.25);
+    border-radius: 30px;
+    background: rgba(12, 28, 52, .65);
+    color: white;
+    backdrop-filter: blur(12px);
+    font-size: 12px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: .3s;
+}
+
+button:hover {
+    background: rgba(100, 160, 220, .3);
+    border-color: white;
+    transform: translateY(-3px);
+}
+
+.footer {
+    position: absolute;
+    bottom: 37px;
+    left: 35px;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: #8099b7;
+}
+
+@media(max-width: 600px) {
+    .footer {
+        display: none;
+    }
+
+    .controls {
+        width: 100%;
+        justify-content: center;
+        bottom: 20px;
+    }
+
+    button {
+        padding: 12px 16px;
+        font-size: 10px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="scene"></canvas>
+
+<div class="interface">
+
+    <div class="header">
+        <h1>CHRISTMAS</h1>
+        <p>A magical winter night</p>
+    </div>
+
+    <div class="footer">
+        ✦ CHRISTMAS WONDERLAND · 2026
+    </div>
+
+    <div class="controls">
+        <button id="snowButton">❄ Snow: Normal</button>
+        <button id="pauseButton">Ⅱ Pause</button>
+        <button id="musicButton">♫ Music: Off</button>
+
+        <link rel="music" href="https://www.chosic.com/wp-content/uploads/2021/12/Jingle-Bells(chosic.com).mp3">
+    </div>
+
+</div>
+
+<script>
+const canvas = document.getElementById("scene");
+const ctx = canvas.getContext("2d");
+
+let W, H;
+let time = 0;
+let paused = false;
+let snowSpeed = 1;
+let mouseX = 0;
+let mouseY = 0;
+
+const random = (min, max) =>
+    Math.random() * (max - min) + min;
+
+function resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    W = window.innerWidth;
+    H = window.innerHeight;
+
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+window.addEventListener("resize", resize);
+resize();
+
+window.addEventListener("mousemove", e => {
+    mouseX = (e.clientX / W - .5) * 2;
+    mouseY = (e.clientY / H - .5) * 2;
+});
+
+// -----------------------------
+// STARS
+// -----------------------------
+
+const stars = Array.from({length: 150}, () => ({
+    x: Math.random(),
+    y: Math.random() * .7,
+    size: random(.5, 2),
+    phase: random(0, Math.PI * 2),
+    speed: random(.5, 2)
+}));
+
+function drawStars() {
+    stars.forEach(star => {
+        const opacity =
+            .35 + Math.sin(time * star.speed + star.phase) * .3;
+
+        ctx.beginPath();
+        ctx.arc(
+            star.x * W,
+            star.y * H,
+            star.size,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fillStyle = `rgba(220,240,255,${opacity})`;
+        ctx.fill();
+    });
+}
+
+// -----------------------------
+// BACKGROUND
+// -----------------------------
+
+function drawBackground() {
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+
+    sky.addColorStop(0, "#030716");
+    sky.addColorStop(.45, "#0b1d39");
+    sky.addColorStop(1, "#172d46");
+
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+
+    // Aurora
+    ctx.save();
+    ctx.globalCompositeOperation = "screen";
+
+    for (let i = 0; i < 3; i++) {
+        const wave = ctx.createLinearGradient(
+            0, H * (.15 + i * .1),
+            W, H * (.4 + i * .1)
+        );
+
+        wave.addColorStop(0, "rgba(0,255,170,0)");
+        wave.addColorStop(.4, "rgba(0,190,150,.08)");
+        wave.addColorStop(.7, "rgba(60,120,255,.09)");
+        wave.addColorStop(1, "rgba(0,255,170,0)");
+
+        ctx.fillStyle = wave;
+        ctx.beginPath();
+
+        ctx.moveTo(0, H * (.2 + i * .08));
+
+        for (let x = 0; x <= W; x += 20) {
+            const y =
+                H * (.22 + i * .09) +
+                Math.sin(x * .003 + time * .35 + i) * 35 +
+                Math.sin(x * .007 - time * .2) * 15;
+
+            ctx.lineTo(x, y);
+        }
+
+        ctx.lineTo(W, H * .55);
+        ctx.lineTo(0, H * .55);
+        ctx.closePath();
+
+        ctx.fill();
+    }
+
+    ctx.restore();
+
+    // Moon
+    const mx = W * .79;
+    const my = H * .2;
+
+    const moonGlow = ctx.createRadialGradient(
+        mx, my, 10,
+        mx, my, 110
+    );
+
+    moonGlow.addColorStop(0, "rgba(220,240,255,.2)");
+    moonGlow.addColorStop(1, "rgba(220,240,255,0)");
+
+    ctx.fillStyle = moonGlow;
+    ctx.beginPath();
+    ctx.arc(mx, my, 110, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#e9f2ff";
+    ctx.shadowColor = "#dcecff";
+    ctx.shadowBlur = 30;
+    ctx.beginPath();
+    ctx.arc(mx, my, 30, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+}
+
+// -----------------------------
+// MOUNTAINS
+// -----------------------------
+
+function drawMountains() {
+    ctx.fillStyle = "#101f37";
+
+    ctx.beginPath();
+    ctx.moveTo(0, H * .62);
+
+    for (let x = 0; x <= W; x += 10) {
+        const y = H * .48 +
+            Math.sin(x * .003) * 65 +
+            Math.sin(x * .008) * 25;
+
+        ctx.lineTo(x, y);
+    }
+
+    ctx.lineTo(W, H);
+    ctx.lineTo(0, H);
+    ctx.closePath();
+    ctx.fill();
+
+    // Snow on mountain peaks
+    ctx.strokeStyle = "rgba(190,220,255,.35)";
+    ctx.lineWidth = 2;
+
+    ctx.beginPath();
+
+    for (let x = 0; x <= W; x += 10) {
+        const y = H * .48 +
+            Math.sin(x * .003) * 65 +
+            Math.sin(x * .008) * 25;
+
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    }
+
+    ctx.stroke();
+}
+
+// -----------------------------
+// VILLAGE
+// -----------------------------
+
+function drawHouse(x, y, scale) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+
+    // House body
+    ctx.fillStyle = "#182a42";
+    ctx.fillRect(-55, -65, 110, 80);
+
+    // Roof
+    ctx.fillStyle = "#263e58";
+    ctx.beginPath();
+    ctx.moveTo(-70, -65);
+    ctx.lineTo(0, -125);
+    ctx.lineTo(70, -65);
+    ctx.closePath();
+    ctx.fill();
+
+    // Snow on roof
+    ctx.strokeStyle = "#e6f3ff";
+    ctx.lineWidth = 6;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(-68, -68);
+    ctx.lineTo(0, -128);
+    ctx.lineTo(68, -68);
+    ctx.stroke();
+
+    // Windows
+    const glow = .7 + Math.sin(time * 2 + x) * .15;
+
+    ctx.fillStyle = `rgba(255,190,90,${glow})`;
+    ctx.shadowColor = "#ffb84d";
+    ctx.shadowBlur = 20;
+
+    ctx.fillRect(-38, -42, 23, 28);
+    ctx.fillRect(15, -42, 23, 28);
+
+    ctx.shadowBlur = 0;
+
+    // Window frames
+    ctx.strokeStyle = "#604c3c";
+    ctx.lineWidth = 3;
+
+    ctx.strokeRect(-38, -42, 23, 28);
+    ctx.strokeRect(15, -42, 23, 28);
+
+    // Door
+    ctx.fillStyle = "#101c2c";
+    ctx.fillRect(-10, -35, 20, 50);
+
+    ctx.restore();
+}
+
+function drawVillage() {
+    drawHouse(W * .12, H * .74, .8);
+    drawHouse(W * .3, H * .7, .65);
+    drawHouse(W * .87, H * .74, .9);
+    drawHouse(W * .68, H * .72, .7);
+}
+
+// -----------------------------
+// CHRISTMAS TREE
+// -----------------------------
+
+function drawTree() {
+    const x = W * .5;
+    const ground = H * .84;
+    const height = Math.min(H * .52, 390);
+    const width = height * .55;
+
+    // Tree glow
+    const glow = ctx.createRadialGradient(
+        x, ground - height * .45, 10,
+        x, ground - height * .45, height * .85
+    );
+
+    glow.addColorStop(0, "rgba(30,180,110,.17)");
+    glow.addColorStop(1, "rgba(30,180,110,0)");
+
+    ctx.fillStyle = glow;
+    ctx.fillRect(x - height, ground - height * 1.3,
+                 height * 2, height * 1.5);
+
+    // Tree trunk
+    ctx.fillStyle = "#63432b";
+    ctx.fillRect(x - 13, ground - 25, 26, 35);
+
+    // Tree layers
+    for (let i = 0; i < 4; i++) {
+        const top = ground - height + i * height * .2;
+        const bottom = top + height * .48;
+        const half = width * (.25 + i * .23);
+
+        const gradient = ctx.createLinearGradient(
+            x - half, top,
+            x + half, bottom
+        );
+
+        gradient.addColorStop(0, "#176b48");
+        gradient.addColorStop(.5, "#0c5738");
+        gradient.addColorStop(1, "#073b2a");
+
+        ctx.fillStyle = gradient;
+
+        ctx.beginPath();
+        ctx.moveTo(x, top);
+        ctx.lineTo(x + half, bottom);
+        ctx.lineTo(x - half, bottom);
+        ctx.closePath();
+        ctx.fill();
+
+        // Snow on branches
+        ctx.strokeStyle = "rgba(220,240,255,.7)";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x - half * .75, bottom - 4);
+        ctx.quadraticCurveTo(
+            x, bottom + 5,
+            x + half * .75, bottom - 4
+        );
+        ctx.stroke();
+    }
+
+    // Christmas light strings
+    for (let row = 0; row < 5; row++) {
+        const y = ground - height + 55 + row * height * .16;
+        const spread = (row + 1) * width * .105;
+
+        ctx.beginPath();
+
+        for (let j = 0; j <= 20; j++) {
+            const t = j / 20;
+            const px = x - spread + t * spread * 2;
+            const py = y + Math.sin(t * Math.PI * 2 + time * .7) * 9;
+
+            if (j === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+        }
+
+        ctx.strokeStyle = "rgba(255,230,180,.35)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        const colors = ["#ff405b", "#ffd65a", "#48caff", "#ffffff", "#ff75b5"];
+
+        for (let j = 0; j < 9; j++) {
+            const t = j / 8;
+            const px = x - spread + t * spread * 2;
+            const py = y + Math.sin(t * Math.PI * 2 + time * .7) * 9;
+
+            const color = colors[(j + row) % colors.length];
+            const brightness = .5 + .5 * Math.sin(time * 3 + j * 2 + row);
+
+            ctx.beginPath();
+            ctx.arc(px, py, 3.5, 0, Math.PI * 2);
+
+            ctx.fillStyle = color;
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 8 + brightness * 12;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+    }
+
+    // Star
+    const starY = ground - height - 8;
+    const starGlow = 15 + Math.sin(time * 3) * 7;
+
+    ctx.save();
+    ctx.translate(x, starY);
+    ctx.rotate(time * .15);
+
+    ctx.shadowColor = "#ffe99b";
+    ctx.shadowBlur = starGlow;
+
+    ctx.fillStyle = "#ffe79b";
+    ctx.beginPath();
+
+    for (let i = 0; i < 10; i++) {
+        const angle = i * Math.PI / 5 - Math.PI / 2;
+        const radius = i % 2 === 0 ? 17 : 7;
+
+        const px = Math.cos(angle) * radius;
+        const py = Math.sin(angle) * radius;
+
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+    }
+
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+}
+
+// -----------------------------
+// SNOW
+// -----------------------------
+
+const snowflakes = Array.from({length: 240}, () => ({
+    x: Math.random() * 1,
+    y: Math.random() * 1,
+    radius: random(.7, 3),
+    speed: random(.3, 1.5),
+    drift: random(-.3, .3),
+    opacity: random(.3, .9)
+}));
+
+function drawSnow() {
+    snowflakes.forEach(f => {
+        f.y += f.speed * snowSpeed * .0015;
+        f.x += (f.drift + mouseX * .025) * .001;
+
+        if (f.y > 1.02) {
+            f.y = -.02;
+            f.x = Math.random();
+        }
+
+        if (f.x > 1) f.x = 0;
+        if (f.x < 0) f.x = 1;
+
+        ctx.beginPath();
+        ctx.arc(
+            f.x * W,
+            f.y * H,
+            f.radius,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fillStyle = `rgba(255,255,255,${f.opacity})`;
+        ctx.fill();
+    });
+}
+
+// -----------------------------
+// SANTA'S SLEIGH
+// -----------------------------
+
+function drawSanta() {
+    const x = ((time * 65) % (W + 300)) - 150;
+    const y = H * .3 + Math.sin(time * 1.2) * 15;
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(.8, .8);
+
+    // Reindeer
+    for (let i = 0; i < 3; i++) {
+        const rx = -i * 45;
+
+        ctx.strokeStyle = "#9b6a47";
+        ctx.lineWidth = 4;
+
+        // Body
+        ctx.beginPath();
+        ctx.ellipse(rx, 0, 17, 9, 0, 0, Math.PI * 2);
+        ctx.fillStyle = "#a97851";
+        ctx.fill();
+
+        // Head
+        ctx.beginPath();
+        ctx.arc(rx + 17, -11, 7, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Antlers
+        ctx.beginPath();
+        ctx.moveTo(rx + 18, -16);
+        ctx.lineTo(rx + 13, -28);
+        ctx.lineTo(rx + 8, -23);
+        ctx.moveTo(rx + 17, -20);
+        ctx.lineTo(rx + 25, -28);
+        ctx.stroke();
+
+        // Legs
+        const movement = Math.sin(time * 10 + i) * 5;
+
+        ctx.beginPath();
+        ctx.moveTo(rx - 8, 5);
+        ctx.lineTo(rx - 10, 19 + movement);
+        ctx.moveTo(rx + 8, 5);
+        ctx.lineTo(rx + 10, 19 - movement);
+        ctx.stroke();
+    }
+
+    // Sleigh
+    ctx.fillStyle = "#b82d40";
+    ctx.beginPath();
+    ctx.ellipse(55, -3, 27, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = "#e5b95c";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(30, 9);
+    ctx.quadraticCurveTo(60, 20, 85, 8);
+    ctx.stroke();
+
+    // Santa
+    ctx.fillStyle = "#e6e1d9";
+    ctx.beginPath();
+    ctx.arc(53, -26, 12, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#d72d3d";
+    ctx.beginPath();
+    ctx.arc(53, -32, 12, Math.PI, Math.PI * 2);
+    ctx.lineTo(65, -28);
+    ctx.lineTo(53, -28);
+    ctx.fill();
+
+    // Santa hat tip
+    ctx.beginPath();
+    ctx.arc(65, -37, 4, 0, Math.PI * 2);
+    ctx.fillStyle = "white";
+    ctx.fill();
+
+    ctx.restore();
+}
+
+// -----------------------------
+// SNOWY GROUND
+// -----------------------------
+
+function drawGround() {
+    const ground = ctx.createLinearGradient(
+        0, H * .83, 0, H
+    );
+
+    ground.addColorStop(0, "#d9eaff");
+    ground.addColorStop(.3, "#a9c9e5");
+    ground.addColorStop(1, "#6687a7");
+
+    ctx.fillStyle = ground;
+    ctx.beginPath();
+    ctx.moveTo(0, H * .85);
+
+    ctx.quadraticCurveTo(
+        W * .3, H * .8,
+        W * .5, H * .85
+    );
+
+    ctx.quadraticCurveTo(
+        W * .8, H * .9,
+        W, H * .83
+    );
+
+    ctx.lineTo(W, H);
+    ctx.lineTo(0, H);
+    ctx.closePath();
+    ctx.fill();
+}
+
+// -----------------------------
+// ANIMATION LOOP
+// -----------------------------
+
+function animate() {
+    if (!paused) {
+        time += 0.016;
+
+        ctx.clearRect(0, 0, W, H);
+
+        ctx.save();
+
+        // Subtle parallax
+        ctx.translate(mouseX * -5, mouseY * -4);
+
+        drawBackground();
+        drawStars();
+        drawMountains();
+        drawVillage();
+        drawGround();
+        drawTree();
+        drawSanta();
+        drawSnow();
+
+        ctx.restore();
+    }
+
+    requestAnimationFrame(animate);
+}
+
+animate();
+
+// -----------------------------
+// CONTROLS
+// -----------------------------
+
+document.getElementById("pauseButton").onclick = function() {
+    paused = !paused;
+
+    this.textContent = paused ? "▶ Resume" : "Ⅱ Pause";
+};
+
+document.getElementById("snowButton").onclick = function() {
+    snowSpeed = snowSpeed === 1 ? 2.5 : snowSpeed === 2.5 ? 4 : 1;
+
+    this.textContent =
+        snowSpeed === 1 ? "❄ Snow: Normal" :
+        snowSpeed === 2.5 ? "❄ Snow: Fast" :
+        "❄ Snow: Very Fast";
+};
+
+// CHRISTMAS MUSIC
+
+const christmasMusic = new Audio("./music/christmas.mp3");
+christmasMusic.loop = true;
+christmasMusic.volume = 0.35;
+
+let musicPlaying = false;
+
+const musicButton = document.getElementById("musicButton");
+
+console.log("Music button found:", musicButton);
+
+musicButton.onclick = async function() {
+
+    if (musicPlaying === false) {
+
+        try {
+            await christmasMusic.play();
+
+            musicPlaying = true;
+            musicButton.innerHTML = "♫ Music: On";
+
+        } catch (error) {
+            console.error(error);
+            alert("Muziekbestand niet gevonden of kan niet worden afgespeeld!");
+        }
+
+    } else {
+
+        christmasMusic.pause();
+        christmasMusic.currentTime = 0;
+
+        musicPlaying = false;
+        musicButton.innerHTML = "♫ Music: Off";
+    }
+};
+</script>
+</body>
+</html>
